@@ -1,0 +1,4 @@
+/src/__pycache__
+/src/Scrapers/__pycache__
+/src/Scrapers/errors/*
+/test/*
