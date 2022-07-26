@@ -1,0 +1,35 @@
+{
+    "filter": {
+        "marketBettingTypes": [
+            "ODDS"
+        ],
+        "eventTypeIds": [
+            1
+        ],
+        "productTypes": [
+            "EXCHANGE"
+        ],
+        "selectBy": "RANK",
+        "contentGroup": {
+            "language": "en",
+            "regionCode": "NZAUS"
+        },
+        "maxResults": 2000
+    },
+    "facets": [
+        {
+            "type": "EVENT_TYPE",
+            "maxValues": 0,
+            "skipValues": 0,
+            "applyNextTo": 0
+        },
+        {
+            "type": "COMPETITION",
+            "maxValues": 0,
+            "skipValues": 0,
+            "applyNextTo": 0
+        }
+    ],
+    "currencyCode": "AUD",
+    "locale": "en"
+}

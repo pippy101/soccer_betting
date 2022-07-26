@@ -6,13 +6,14 @@ all scrapers are a function that yields every match
 """
 
 import gevent
+from regex import R
 if __name__ == "__main__":
     from gevent import monkey
     monkey.patch_all()
 from datetime import datetime
 from unidecode import unidecode
 from bs4 import BeautifulSoup
-from pprint import pprint
+from math import ceil
 import time
 import requests
 import json
@@ -656,6 +657,109 @@ class playup_scraper(Scraper):
                 yield_game = {**game, **odds_dict}
                 del yield_game["_market_group_id"]
                 yield yield_game
+
+
+with open(r"src/Scrapers/bf_post.json", "r") as fp:
+    betfair_request_payload = json.load(fp)
+
+
+class betfair_scraper(Scraper):
+    """
+    betfair scraper scrapes the betfair exchange.
+    since, there are multiple betting options per market, odds + volume per option, combined with back + lay,
+    each game is not a 1d dict.
+    """
+    def __init__(self, log=sys.stdout):
+        self.site = "betfair"
+        self.names = None
+        self.i = 1
+        self.log = log
+        self.url_name_dict = None
+
+        self.search_url = "https://scan-inbf.betfair.com.au/www/sports/navigation/facet/v1/search?_ak=nzIFcwyWhrlwYMrh&alt=json"
+        self.market_url = "https://ero.betfair.com.au/www/sports/exchange/readonly/v1/bymarket?_ak=nzIFcwyWhrlwYMrh&alt=json&currencyCode=AUD&locale=en&marketIds={market_ids}&rollupLimit=25&rollupModel=STAKE&types=MARKET_STATE,MARKET_RATES,MARKET_DESCRIPTION,EVENT,RUNNER_DESCRIPTION,RUNNER_STATE,RUNNER_EXCHANGE_PRICES_BEST,RUNNER_METADATA,MARKET_LICENCE,MARKET_LINE_RANGE_INFO"
+    
+    def get_page(self, url, list_loc):
+        with requests.get(url, headers=headers) as resp:
+            if resp.status_code == 200:
+                list_loc.append(resp.json())
+            else:
+                self.log.write(f"{self.site} encountered error code of {resp.status_code}: {url}")
+
+    def get_data(self):
+        with requests.post(self.search_url, headers=headers, json=betfair_request_payload) as resp:
+            if resp.status_code == 200:
+                search_results = resp.json()
+            else:
+                self.log.write(f"{self.site} encountered error code of {resp.status_code}: {self.search_url}")
+                return {}
+        
+        with open(r"test/betfair_search.json", "w") as fp:
+            json.dump(search_results, fp, indent=4)
+
+        market_ids = [event["marketId"] for event in search_results["results"]]
+        competition_ids = search_results["attachments"]["competitions"]
+        # event_id -> competition name
+        competition_map = {event["eventId"]: competition_ids[str(event["competitionId"])]["name"] for event in search_results["results"]}
+
+        time_of_collection = int(datetime.utcnow().timestamp())
+        cruft_fields = {
+            "time_of_collection": time_of_collection,
+            "site": self.site
+        }
+
+        # betfair only returns a max of 25 games per request
+        get_url = lambda ids: self.market_url.format(market_ids=','.join(ids))
+        raw_data = []
+        jobs = [gevent.spawn(self.get_page, get_url(market_ids[i*25:(i+1)*25]), raw_data) for i in range(int(ceil(len(market_ids) / 25)))]
+        gevent.wait(jobs)
+
+        data = []
+        
+        for page in raw_data:
+            for event in page["eventTypes"][0]["eventNodes"]:
+                market_1x2 = list(filter(
+                    lambda x: x["description"]["marketName"] == "Match Odds",
+                    event["marketNodes"]
+                ))
+                if len(market_1x2) == 0: continue
+
+                market_1x2 = market_1x2[0]
+                event_name = event['event']["eventName"]
+                home_team, away_team = event_name.split(" v ")
+                match_datetime = int(datetime.strptime(event["event"]["openDate"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+                competition = competition_map[event["eventId"]]
+
+                odds_data = {"home_odds": [], "home_volume": [], "home_odds_lay": [], "home_volume_lay": [],
+                "away_odds": [], "away_volume": [], "away_odds_lay": [], "away_volume_lay": [],
+                "draw_odds": [], "draw_volume": [], "draw_odds_lay": [], "draw_volume_lay": []}
+
+                for runner in market_1x2["runners"]:
+                    runner_name = runner["description"]["runnerName"]
+                    if runner_name == home_team: runner_type = "home"
+                    if runner_name == away_team: runner_type = "away"
+                    if runner_name == "The Draw": runner_type = "draw"
+                    
+                    for market in runner["exchange"]["availableToBack"]:
+                        odds_data[f"{runner_type}_odds"].append(market["price"])
+                        odds_data[f"{runner_type}_volume"].append(market["size"])
+                    if "availableToLay" in runner["exchange"]:
+                        for market in runner["exchange"]["availableToLay"]:
+                            odds_data[f"{runner_type}_odds_lay"].append(market["price"])
+                            odds_data[f"{runner_type}_volume_lay"].append(market["size"])
+                
+                    data.append({
+                        "home_team": home_team,
+                        "away_team": away_team,
+                        "match_datetime": match_datetime,
+                        "competition": competition,
+                        "site_id": event["eventId"],
+                        **odds_data,
+                        **cruft_fields
+                    })
+
+        return data
+
     
 
 def _gevent_scraper_data(_scraper, dict_loc):
@@ -673,6 +777,7 @@ def _get_all_data(log=sys.stdout):
         interwetten_scraper(log=log),
         bluebet_scraper(log=log),
         playup_scraper(log=log),
+        betfair_scraper(log=log)
     )
     data = {}
     jobs = [gevent.spawn(_gevent_scraper_data, _scraper, data) for _scraper in scrapers]
@@ -694,6 +799,7 @@ def get_all_data(log=sys.stdout):
         interwetten_scraper(log=log),
         bluebet_scraper(log=log),
         playup_scraper(log=log),
+        betfair_scraper(log=log)
     )
     data = []
     jobs = [gevent.spawn(scraper_data, _scraper, data) for _scraper in scrapers]
