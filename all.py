@@ -20,12 +20,11 @@ def get_data(_func, list_loc):
     list_loc += data
 
 games = []
-functions = [betexplorer.outcomes, forebet.predictions, odds_scrapers.get_all_data,
-    sofascore.h2h, sofascore.votes, sofascore.pregame]
+functions = [betexplorer.outcomes, forebet.predictions, odds_scrapers.get_all_data]
 jobs = [gevent.spawn(get_data, _func, games) for _func in functions]
 gevent.wait(jobs)
 
 json.dump(games, open(r"test/all_data.json", "w"), indent=4)
 matched = match.group_by_match(games, -1)
 json.dump(matched, open(r"test/all_data_grouped.json", "w"), indent=4)
-print(len(matched))
+print(f"Found {len(matched):,} unique games")
