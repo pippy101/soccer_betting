@@ -4,7 +4,6 @@ h2h, pregame, votes output a list of their namesake stats
 
 from datetime import datetime, timedelta
 from unidecode import unidecode
-import requests
 import cfscrape
 import sys
 import gevent
@@ -19,6 +18,7 @@ date_url = "https://api.sofascore.com/api/v1/sport/football/scheduled-events/{da
 vote_url_format = "https://api.sofascore.com/api/v1/event/{_id}/votes"
 pregame_url_format = "https://api.sofascore.com/api/v1/event/{_id}/pregame-form"
 h2h_url_format = "https://api.sofascore.com/api/v1/event/{_id}/h2h"
+odds_url_format = "https://api.sofascore.com/api/v1/event/{_id}/provider/1/winning-odds"
 result_map = {
     "W": 1,
     "D": 0,
@@ -26,30 +26,7 @@ result_map = {
 }
 
 
-def future_proc_func(metadata):
-    """
-    filters out all games that have finished or are in play
-        ~only keeps games that are going to happen in the future~
-    extracts the necessary info
-    """
-    metadata = filter(lambda game: game["homeScore"] == dict(), metadata)
-    # python go brrrrr
-    metadata = list(map(
-        lambda game: {
-            "match_datetime": game["startTimestamp"],
-            "site_id": str(game["id"]),
-            "competition": unidecode(game["tournament"]["uniqueTournament"]["name"]),
-            "home_team": unidecode(game["homeTeam"]["name"]),
-            "away_team": unidecode(game["awayTeam"]["name"]),
-            "time_of_collection": None,
-            "site": "sofascore"
-        },
-        metadata
-    ))
-    return metadata
-
-
-def get_sofascore_metadata(cfscraper=None, days=range(no_days), process_func=future_proc_func, log=sys.stdout):
+def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
     """
     returns list of dict containing the metadata of each match on sofascore
     existing cfscraper session can be used
@@ -64,16 +41,32 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), process_func=fut
     urls = {date: date_url.format(date=date) for date in dates}
 
     for date in urls:
-        try:
-            with cfscraper.get(urls[date], headers=headers, timeout=10) as resp:
-                if resp.status_code == 200:
-                    metadata += resp.json()["events"]
-                else:
-                    log.write(f"Sofascore scraper failed on {date} with status code: {resp.status_code}\n")
-        except requests.exceptions.ConnectionError:
-            log.write("Connection aborted error in src/Scrapers/sofascore.metadata()\n")
+        with cfscraper.get(urls[date], headers=headers, timeout=10) as resp:
+            if resp.status_code == 200:
+                metadata += resp.json()["events"]
+            else:
+                log.write(f"Sofascore scraper failed on {date} with status code: {resp.status_code}\n")
 
-    return process_func(metadata)
+    metadata = list(map(
+        lambda game: {
+            "match_datetime": game["startTimestamp"],
+            "site_id": str(game["id"]),
+            "competition": unidecode(game["tournament"]["uniqueTournament"]["name"]),
+            "home_team": unidecode(game["homeTeam"]["name"]),
+            "away_team": unidecode(game["awayTeam"]["name"]),
+            "time_of_collection": None,
+            "site": "sofascore"
+        },
+        filter(lambda game: game["homeScore"] == dict(), metadata)
+    ))
+    no_dup_metadata = []
+    site_ids = []
+    for game in metadata:
+        if game["site_id"] not in site_ids:
+            no_dup_metadata.append(game)
+            site_ids.append(game["site_id"])
+
+    return no_dup_metadata
 
 
 def sofascore_scraper(url_format, name, show_progress=False):
@@ -98,21 +91,18 @@ def sofascore_scraper(url_format, name, show_progress=False):
             data = []
 
             for game_idx, url in enumerate(urls):
-                try:
-                    with scraper.get(url, headers=headers) as resp:
-                        if resp.status_code == 200:
-                            raw = resp.json()
-                            data.append(metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": int(datetime.utcnow().timestamp())})
-                            if show_progress:
-                                log.write(f"Completed {game_idx+1} / {len_metadata} for sofascore {name}")
-                                
-                        elif resp.status_code == 404:
-                            if show_progress:
-                                log.write(f"Unable to find {game_idx+1} / {len_metadata} for sofascore {name}")
-                        else:
-                            log.write(f"Sofascore {name} failed on id {metadata[game_idx]['site_id']} with status code {resp.status_code}")
-                except requests.exceptions.ConnectionError:
-                    log.write(f"Connection aborted error in src/Scrapers/sofascore.{name}()")
+                with scraper.get(url, headers=headers) as resp:
+                    if resp.status_code == 200:
+                        raw = resp.json()
+                        data.append(metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": int(datetime.utcnow().timestamp())})
+                        if show_progress:
+                            log.write(f"Completed {game_idx+1} / {len_metadata} for sofascore {name}")
+                            
+                    elif resp.status_code == 404:
+                        if show_progress:
+                            log.write(f"Unable to find {game_idx+1} / {len_metadata} for sofascore {name}")
+                    else:
+                        log.write(f"Sofascore {name} failed on id {metadata[game_idx]['site_id']} with status code {resp.status_code}")
 
             return data
         return inner
@@ -179,7 +169,7 @@ def votes(*args, **kwargs):
     return base_doc
 votes.name = "sofascore_votes"
 
-@async_sofascore_scraper(pregame_url_format, "pregame", show_progress=True)
+@async_sofascore_scraper(pregame_url_format, "pregame")
 def pregame(*args, **kwargs):
     raw_pregame = kwargs["raw_data"]
     home_doc = raw_pregame["homeTeam"]
@@ -230,3 +220,17 @@ def h2h(*args, **kwargs):
     
     return base_doc
 h2h.name = "sofascore h2h"
+
+@async_sofascore_scraper(h2h_url_format, "odds")
+def odds(*args, **kwargs):
+    raw_odds = kwargs["raw_data"]
+    base_doc = {"home_expected": None, "home_actual": None,
+        "home_expected": None, "away_actual": None}
+    
+    for team_type in ['home', 'away']:
+        if team_type in raw_odds:
+            base_doc[f"{team_type}_expected"] = raw_odds[team_type]["excepected"]
+            base_doc[f"{team_type}_actual"] = raw_odds[team_type]["actual"]
+    
+    return base_doc
+odds.name = "sofascore odds"
