@@ -7,6 +7,7 @@ from unidecode import unidecode
 import requests
 import cfscrape
 import sys
+import gevent
 
 sofascore_config = {"days": 3, "all": True}
 
@@ -68,9 +69,9 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), process_func=fut
                 if resp.status_code == 200:
                     metadata += resp.json()["events"]
                 else:
-                    log.write(f"Sofascore scraper failed on {date} with status code: {resp.status_code}")
+                    log.write(f"Sofascore scraper failed on {date} with status code: {resp.status_code}\n")
         except requests.exceptions.ConnectionError:
-            log.write("Connection aborted error in src/Scrapers/sofascore.metadata()")
+            log.write("Connection aborted error in src/Scrapers/sofascore.metadata()\n")
 
     return process_func(metadata)
 
@@ -82,22 +83,14 @@ def sofascore_scraper(url_format, name, show_progress=False):
         going through each id, formatting url
     """
     def decorator(func):
-        def inner(onetime=False, cur=None, log=None):
+        def inner(log=sys.stdout, done_ids=[]):
             """
-            onetime: whether to scrape games already scraped
-                true when data changes
+            done_ids is a list of ids that you *don't* want to be scraped
+            useful for data that doesn't really change like h2h
             """
             scraper = cfscrape.create_scraper()
             metadata = get_sofascore_metadata(cfscraper=scraper, log=log)
-            
-            if onetime and cur is not None:
-                cur.execute(f"""SELECT DISTINCT ON (site_id) site_id 
-                FROM sofascore_{name}_data
-                WHERE time_of_collection > {int((datetime.now()-timedelta(days=no_days)).timestamp())}""")
-                already_scraped_ids = [x[0] for x in cur.fetchall()]
-                metadata = list(filter(
-                    lambda game: game["site_id"] not in already_scraped_ids,
-                    metadata))
+            metadata = list(filter(lambda game: game["site_id"] not in done_ids, metadata))
 
             urls = [url_format.format(_id=game["site_id"]) for game in metadata]
             len_metadata = len(metadata)
@@ -126,7 +119,50 @@ def sofascore_scraper(url_format, name, show_progress=False):
     return decorator
 
 
-@sofascore_scraper(vote_url_format, "votes")
+def add_get_page(url, log, name, list_loc, show_progress=False, game_idx=None, len_metadata=None, _id=None):
+    # creating a scraper for every request seems gratuitistly inefficient
+    # hopefully it works
+    scraper = cfscrape.create_scraper()
+    with scraper.get(url, headers=headers) as resp:
+        if resp.status_code == 200:
+            list_loc.append((game_idx, resp.json()))
+            if show_progress:
+                log.write(f"Completed {game_idx+1} / {len_metadata} for sofascore {name}\n")
+                
+        elif resp.status_code == 404:
+            if show_progress:
+                log.write(f"Unable to find {game_idx+1} / {len_metadata} for sofascore {name}\n")
+        else:
+            log.write(f"Sofascore {name} failed on id {_id} with status code {resp.status_code}\n")
+
+
+def async_sofascore_scraper(url_format, name, show_progress=False):
+    """
+    asynchronously collects the responses unlike the above 
+    will probably be *quickly* deprecated by cloufare bot detection
+    """
+    def decorator(func):
+        def inner(log=sys.stdout, done_ids=[]):
+            scraper = cfscrape.create_scraper()
+            metadata = get_sofascore_metadata(cfscraper=scraper, log=log)
+            metadata = list(filter(lambda game: game["site_id"] not in done_ids, metadata))
+
+            urls = [url_format.format(_id=game["site_id"]) for game in metadata]
+
+            raw_data = []
+            jobs = [gevent.spawn(add_get_page, url, log, name, raw_data, show_progress=show_progress, game_idx=idx, len_metadata=len(metadata), _id=metadata[idx]["site_id"])
+                for idx, url in enumerate(urls)]
+            gevent.wait(jobs)
+            
+            data = [metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": int(datetime.utcnow().timestamp())}
+                for game_idx, raw in raw_data]
+
+            return data
+        return inner
+    return decorator
+
+
+@async_sofascore_scraper(vote_url_format, "votes")
 def votes(*args, **kwargs):
     raw_votes = kwargs["raw_data"]
     base_doc = {"home_votes": None, "away_votes": None, "draw_votes": None}
@@ -143,7 +179,7 @@ def votes(*args, **kwargs):
     return base_doc
 votes.name = "sofascore_votes"
 
-@sofascore_scraper(pregame_url_format, "pregame")
+@async_sofascore_scraper(pregame_url_format, "pregame", show_progress=True)
 def pregame(*args, **kwargs):
     raw_pregame = kwargs["raw_data"]
     home_doc = raw_pregame["homeTeam"]
@@ -174,7 +210,7 @@ def pregame(*args, **kwargs):
     return base_doc
 pregame.name = "sofascore pregame"
 
-@sofascore_scraper(h2h_url_format, "h2h")
+@async_sofascore_scraper(h2h_url_format, "h2h")
 def h2h(*args, **kwargs):
     raw_h2h = kwargs["raw_data"]
     base_doc = {"home_wins": None, "away_wins": None, "draws": None,
