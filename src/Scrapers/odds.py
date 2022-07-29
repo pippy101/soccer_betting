@@ -326,9 +326,9 @@ def onex(log=sys.stdout):
     site = "palmerbet"
     urls = [
             # in play
-            "https://1xbet.com/LiveFeed/Get1x2_VZip?sports=1&count=50&lng=en&mode=4&country=169&getEmpty=true&noFilterBlockEvent=true",
+            "https://1xbet.com/LiveFeed/Get1x2_VZip?sports=1&count=1000&lng=en&mode=4&country=169&getEmpty=true&noFilterBlockEvent=true",
             # upcoming
-            "https://1xbet.com/LineFeed/Get1x2_VZip?sports=1&count=50&lng=en&tf=2200000&tz=3&mode=4&country=169&getEmpty=true"
+            "https://1xbet.com/LineFeed/Get1x2_VZip?sports=1&count=1000&lng=en&tf=2200000&tz=3&mode=4&country=169&getEmpty=true"
         ]
 
     cruft_fields = {
@@ -343,10 +343,10 @@ def onex(log=sys.stdout):
 
         games = []
         for match in raw_data["Value"]:
+            try:
                 oneX_id = match["I"]
                 home = match['O1']
                 away = match["O2"]
-                # country = match["CN"]
                 comp = match["L"]
                 match_datetime = match["S"]
                 home_odds = away_odds = draw_odds = None
@@ -359,21 +359,24 @@ def onex(log=sys.stdout):
                     
                     if None not in [home_odds, draw_odds, away_odds]:
                         break
-                
-                games.append({
-                    "competition": unidecode(comp),
-                    "site_id": str(oneX_id),
-                    "home_team": unidecode(home),
-                    "away_team": unidecode(away),
-                    "home_odds": home_odds,
-                    "away_odds": away_odds,
-                    "draw_odds": draw_odds,
-                    "home_active": home_active,
-                    "away_active": away_active,
-                    "draw_active": draw_active,
-                    "match_datetime": int(match_datetime),
-                    **cruft_fields
-                })
+                    
+            except KeyError:
+                continue
+            
+            games.append({
+                "competition": unidecode(comp),
+                "site_id": str(oneX_id),
+                "home_team": unidecode(home),
+                "away_team": unidecode(away),
+                "home_odds": home_odds,
+                "away_odds": away_odds,
+                "draw_odds": draw_odds,
+                "home_active": home_active,
+                "away_active": away_active,
+                "draw_active": draw_active,
+                "match_datetime": int(match_datetime),
+                **cruft_fields
+            })
     
     return games
 onex.name = "1x_1x2_scraper"
@@ -640,7 +643,7 @@ def betfair(log=sys.stdout):
     responses = []
     jobs = [gevent.spawn(add_get_page, get_url(market_ids[i*25:(i+1)*25]), log, site, responses) for i in range(int(ceil(len(market_ids) / 25)))]
     gevent.wait(jobs)
-    i = 0
+    # i = 0
     games = []
     for resp in responses:
         if resp is None: continue
@@ -706,15 +709,15 @@ def scraper_data(_scraper, list_loc, log):
 # returns 1-d list of games
 def get_all_data(log=sys.stdout):
     scrapers = (
-        neds_scraper,
-        tab_scraper,
-        ps3838_scraper,
-        palmerbet_scraper,
-        onex_scraper,
-        interwetten_scraper,
-        bluebet_scraper,
-        playup_scraper,
-        betfair_scraper
+        neds,
+        tab,
+        ps3838,
+        palmerbet,
+        onex,
+        interwetten,
+        bluebet,
+        playup,
+        betfair
     )
     data = []
     jobs = [gevent.spawn(scraper_data, _scraper=_scraper, list_loc=data, log=log) for _scraper in scrapers]

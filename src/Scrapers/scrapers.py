@@ -3,7 +3,7 @@ if __name__ == "__main__":
     from gevent import monkey; monkey.patch_all()
 
 import forebet, sofascore, betexplorer, odds
-
+print(forebet)
 if __name__ == "__main__":
     scrapers = [betexplorer.outcomes, forebet.predictions,
         sofascore.votes, sofascore.h2h, sofascore.pregame,
@@ -11,7 +11,6 @@ if __name__ == "__main__":
         odds.ps3838, odds.palmerbet,
         odds.onex, odds.interwetten,
         odds.playup, odds.betfair]
-    scrapers = [odds.betfair]
 
     MIN_GAMES = 50
     def length_test(scraper):

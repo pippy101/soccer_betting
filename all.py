@@ -3,25 +3,29 @@ Example/test:
 scrapes all the data from all the sites
 """
 import gevent 
-from gevent import monkey
-
-from Scrapers import odds; monkey.patch_all()
+from gevent import monkey; monkey.patch_all()
+from datetime import timedelta
 import json
+import time
 
+from src.Scrapers import betexplorer, forebet, sofascore, odds
 from src import match
-from src.Scrapers import (
-    betexplorer,
-    forebet,
-    sofascore
-)
 
 def get_data(_func, list_loc):
+    start = time.time()
     data = _func()
-    print(f"{_func.__name__}: {len(data):,}")
+    time_taken = time.time()-start
+    print(f"{_func.name}: {len(data):,} in {timedelta(seconds=int(time_taken))}")
     list_loc += data
 
 games = []
-functions = [betexplorer.outcomes, forebet.predictions, odds.get_all_data]
+functions = [betexplorer.outcomes, forebet.predictions,
+        sofascore.votes, sofascore.h2h, sofascore.pregame,
+        odds.neds, odds.tab, odds.bluebet,
+        odds.ps3838, odds.palmerbet,
+        odds.onex, odds.interwetten,
+        odds.playup, odds.betfair]
+
 jobs = [gevent.spawn(get_data, _func, games) for _func in functions]
 gevent.wait(jobs)
 
