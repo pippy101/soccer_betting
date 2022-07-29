@@ -141,6 +141,7 @@ def votes(*args, **kwargs):
         }
     
     return base_doc
+votes.name = "sofascore_votes"
 
 @sofascore_scraper(pregame_url_format, "pregame")
 def pregame(*args, **kwargs):
@@ -171,7 +172,7 @@ def pregame(*args, **kwargs):
                 base_doc[f"{team}_res_{res_idx+1}"] = result_map[result]
     
     return base_doc
-
+pregame.name = "sofascore pregame"
 
 @sofascore_scraper(h2h_url_format, "h2h")
 def h2h(*args, **kwargs):
@@ -192,3 +193,4 @@ def h2h(*args, **kwargs):
         base_doc["draws_man"] = man_doc["draws"]
     
     return base_doc
+h2h.name = "sofascore h2h"

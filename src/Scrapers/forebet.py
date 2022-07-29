@@ -69,3 +69,4 @@ def predictions(log=sys.stdout):
     gevent.wait(jobs)
     
     return predictions
+predictions.name = "forebet_predictions"

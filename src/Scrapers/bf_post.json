@@ -14,7 +14,7 @@
             "language": "en",
             "regionCode": "NZAUS"
         },
-        "maxResults": 2000
+        "maxResults": 4000
     },
     "facets": [
         {

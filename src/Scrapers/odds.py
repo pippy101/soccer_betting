@@ -32,11 +32,15 @@ def get_page(url, log, name):
         if resp.status_code == 200:
             return resp
         else:
-            log.write(f"{name} encountered error code of {resp.status_code}:{url}")
+            log.write(f"{name} encountered error code of {resp.status_code}:{url}\n")
             return
 
 
-def tab_scraper(log=sys.stdout):
+def add_get_page(url, log, name, list_loc):
+    list_loc.append(get_page(url, log, name))
+
+
+def tab(log=sys.stdout):
     site = "tab"
     url = "https://api.beta.tab.com.au/v1/recommendation-service/Soccer/featured?jurisdiction=NSW"
 
@@ -104,9 +108,10 @@ def tab_scraper(log=sys.stdout):
                 })
 
     return game_data
+tab.name = "tab_1x2_scraper"
 
 
-def neds_scraper(log=sys.stdout):
+def neds(log=sys.stdout):
     price_hash = ":940b8704-e497-4a76-b390-00918ff7d282:"
     site = "neds"
     url = "https://api.neds.com.au/v2/sport/event-request?category_ids=%5B%2271955b54-62f6-4ac5-abaa-df88cad0aeef%22%5D&include_any_team_vs_any_team_events=true"
@@ -180,9 +185,10 @@ def neds_scraper(log=sys.stdout):
             })
         
     return game_data
+neds.name = "neds_1x2_scraper"
 
 
-def ps3838_scraper(log=sys.stdout):
+def ps3838(log=sys.stdout):
     site = "ps3838"
     urls = [
             "https://www.ps3838.com/sports-service/sv/compact/events?",
@@ -258,9 +264,10 @@ def ps3838_scraper(log=sys.stdout):
                 })
                 
     return matches
+ps3838.name = "ps3838_1x2_scraper"
 
 
-def palmerbet_scraper(log=sys.stdout):
+def palmerbet(log=sys.stdout):
     site = "palmerbet"
     url = "https://fixture.palmerbet.online/fixtures/sports/b4073512-cdd5-4953-950f-3f7ad31fa955/matches?sportType=soccer&pageSize=1000&channel=website"
     
@@ -312,9 +319,10 @@ def palmerbet_scraper(log=sys.stdout):
         })
     
     return games
+palmerbet.name = "palmerbet_1x2_scraper"
 
 
-def onex_scraper(log=sys.stdout):
+def onex(log=sys.stdout):
     site = "palmerbet"
     urls = [
             # in play
@@ -368,9 +376,10 @@ def onex_scraper(log=sys.stdout):
                 })
     
     return games
+onex.name = "1x_1x2_scraper"
 
 
-def interwetten_scraper(log=sys.stdout):
+def interwetten(log=sys.stdout):
     site = "interwetten"
     url = "https://www.interwetten.com/en/sport/upcoming?hours=48"
 
@@ -435,9 +444,10 @@ def interwetten_scraper(log=sys.stdout):
                 **cruft_fields
             })
     return games
+interwetten.name = "interwetten_1x2_scraper"
 
 
-def bluebet_scraper(log=sys.stdout):
+def bluebet(log=sys.stdout):
     site = "bluebet"
     url = "https://web20-api.bluebet.com.au/MasterCategory?EventTypeId=100&WithLevelledMarkets=true"
 
@@ -488,13 +498,10 @@ def bluebet_scraper(log=sys.stdout):
                 })
     
     return games
+bluebet.name = "bluebet_1x2_scraper"
 
 
-def add_get_page(url, log, name, list_loc):
-    list_loc.append(get_page(url, log, name))
-    
-
-def playup_scraper(log=sys.stdout):
+def playup(log=sys.stdout):
     site = "playup"
     first_url = "https://wagering-api.playup.io/v1/sport_events/?include=primary_market_group.markets.selections,participants,sportcast_fixture&filter[status_id]=1,7&page[size]=200"
     paginated_url = "https://wagering-api.playup.io/v1/sport_events?include=primary_market_group.markets.selections,participants,sportcast_fixture&filter%5Bstatus_id%5D=1%2C7&page%5Bnumber%5D={page_no}&page%5Bsize%5D=200"
@@ -597,14 +604,15 @@ def playup_scraper(log=sys.stdout):
                 del yield_game["_market_group_id"]
                 all_games.append(yield_game)
     return all_games
+playup.name = "playup_1x2_scraper"
 
 
 with open(r"src/Scrapers/bf_post.json", "r") as fp:
     betfair_request_payload = json.load(fp)
 
 
-def betfair_scraper(log=sys.stdout):
-    site = "netfair"
+def betfair(log=sys.stdout):
+    site = "betfair"
     search_url = "https://scan-inbf.betfair.com.au/www/sports/navigation/facet/v1/search?_ak=nzIFcwyWhrlwYMrh&alt=json"
     market_url = "https://ero.betfair.com.au/www/sports/exchange/readonly/v1/bymarket?_ak=nzIFcwyWhrlwYMrh&alt=json&currencyCode=AUD&locale=en&marketIds={market_ids}&rollupLimit=25&rollupModel=STAKE&types=MARKET_STATE,MARKET_RATES,MARKET_DESCRIPTION,EVENT,RUNNER_DESCRIPTION,RUNNER_STATE,RUNNER_EXCHANGE_PRICES_BEST,RUNNER_METADATA,MARKET_LICENCE,MARKET_LINE_RANGE_INFO"
 
@@ -612,9 +620,11 @@ def betfair_scraper(log=sys.stdout):
         if resp.status_code == 200:
             search_results = resp.json()
         else:
-            log.write(f"{site} encountered error code of {resp.status_code}: {search_url}")
+            log.write(f"{site} encountered error code of {resp.status_code}: {search_url}\n")
             return {}
-    
+
+    # with open(r"test/betfair/betfair_search.json", "w") as fp:
+    #     json.dump(search_results, fp, indent=4)
 
     market_ids = [event["marketId"] for event in search_results["results"]]
     competition_ids = search_results["attachments"]["competitions"]
@@ -625,20 +635,19 @@ def betfair_scraper(log=sys.stdout):
         "time_of_collection": int(datetime.utcnow().timestamp()),
         "site": site
     }
-
     # betfair only returns a max of 25 games per request
     get_url = lambda ids: market_url.format(market_ids=','.join(ids))
     responses = []
     jobs = [gevent.spawn(add_get_page, get_url(market_ids[i*25:(i+1)*25]), log, site, responses) for i in range(int(ceil(len(market_ids) / 25)))]
     gevent.wait(jobs)
-
+    i = 0
     games = []
     for resp in responses:
         if resp is None: continue
         page = resp.json()
         for event in page["eventTypes"][0]["eventNodes"]:
             market_1x2 = list(filter(
-                lambda x: x["description"]["marketName"] == "Match Odds",
+                lambda x: x["description"]["marketName"].lower() == "match odds",
                 event["marketNodes"]
             ))
             if len(market_1x2) == 0: continue
@@ -667,17 +676,28 @@ def betfair_scraper(log=sys.stdout):
                         odds_data[f"{runner_type}_odds_lay"].append(market["price"])
                         odds_data[f"{runner_type}_volume_lay"].append(market["size"])
             
-                games.append({
-                    "home_team": home_team,
-                    "away_team": away_team,
-                    "match_datetime": match_datetime,
-                    "competition": competition,
-                    "site_id": event["eventId"],
-                    **odds_data,
-                    **cruft_fields
-                })
-        return games
-        
+            games.append({
+                "home_team": home_team,
+                "away_team": away_team,
+                "match_datetime": match_datetime,
+                "competition": competition,
+                "site_id": event["eventId"],
+                "total_matched": market_1x2["state"]["totalMatched"],
+                "total_available": market_1x2["state"]["totalAvailable"],
+                **odds_data,
+                **cruft_fields
+            })
+
+        # i += 1
+        # with open(rf"test/betfair/betfair_page_{i}.json", "w") as fp:
+        #     json.dump(page, fp, indent=4)
+
+    # with open(rf"test/betfair/betfair_proc.json", "w") as fp:
+    #     json.dump(games, fp, indent=4)
+
+    return games
+betfair.name = "betfair_1x2_scraper"
+
 
 def scraper_data(_scraper, list_loc, log):
     list_loc += _scraper(log=log)

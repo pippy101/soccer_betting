@@ -57,7 +57,11 @@ def get_metadata(date, metadata, site_ids, log=sys.stdout):
             a = tr.find("a")
             teams = a.get_text()
             if " - " in teams:
-                home, away = teams.split(" - ")
+                teams = teams.split(" - ")
+                if len(teams) == 2:
+                    home, away = teams
+                else:
+                    continue
             else:
                 continue
 
@@ -112,3 +116,4 @@ def outcomes(log=sys.stdout):
     gevent.wait(jobs)
 
     return metadata
+outcomes.name = "betexplorer outcomes"
