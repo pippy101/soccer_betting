@@ -8,14 +8,17 @@ from datetime import timedelta
 import json
 import time
 
-from src.Scrapers import betexplorer, forebet, sofascore, odds
-from src import match
+from Scrapers import betexplorer, forebet, sofascore, odds
+import match
 
 def get_data(_func, list_loc):
     start = time.time()
     data = _func()
+    for game in data:
+        game["data_type"] = _func.data_type
+        game["site"] = _func.site
     time_taken = time.time()-start
-    print(f"{_func.name}: {len(data):,} in {timedelta(seconds=int(time_taken))}")
+    print(f"{_func.site} {_func.data_type}: {len(data):,} in {timedelta(seconds=int(time_taken))}")
     list_loc += data
 
 games = []

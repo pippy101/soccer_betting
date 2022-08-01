@@ -50,7 +50,7 @@ def tab(log=sys.stdout):
 
     cruft_fields = {
         "time_of_collection": int(datetime.utcnow().timestamp()),
-        "site": "tab"
+        "site": site
     }
 
     game_data = []
@@ -76,25 +76,25 @@ def tab(log=sys.stdout):
                     for proposition in market["propositions"]:
                         if "position" in proposition:
                             if proposition["position"] == "HOME":
-                                home_odds = proposition["returnWin"]
+                                home_odds = float(proposition["returnWin"])
                                 home_active = proposition["isOpen"]
                             elif proposition["position"] == "AWAY":
-                                away_odds = proposition["returnWin"]
+                                away_odds = float(proposition["returnWin"])
                                 away_active = proposition["isOpen"]
                             elif proposition["position"] == "DRAW":
-                                draw_odds = proposition["returnWin"]
+                                draw_odds = float(proposition["returnWin"])
                                 draw_active = proposition["isOpen"]
 
                     break
             
-            match_datetime = datetime.strptime(match["startTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() + 10 * 60 * 60
+            game_time = datetime.strptime(match["startTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() + 10 * 60 * 60
             
             if None not in [home_odds, away_odds, draw_odds,
                     home_active, away_active, draw_active]:
 
                 game_data.append({
                     "competition": unidecode(comp_name),
-                    "site_id": str(tab_id),
+                    "site_id": int(tab_id),
                     "home_team": unidecode(home),
                     "away_team": unidecode(away),
                     "home_odds": home_odds,
@@ -103,12 +103,13 @@ def tab(log=sys.stdout):
                     "home_active": home_active,
                     "away_active": away_active,
                     "draw_active": draw_active,
-                    "match_datetime": int(match_datetime),
+                    "game_time": int(game_time),
                     **cruft_fields
                 })
 
     return game_data
-tab.name = "tab_1x2_scraper"
+tab.data_type = "match"
+tab.site = "tab"
 
 
 def neds(log=sys.stdout):
@@ -122,7 +123,7 @@ def neds(log=sys.stdout):
 
     cruft_fields = {
         "time_of_collection": int(datetime.utcnow().timestamp()),
-        "site": "tab"
+        "site": site
     }
 
     game_data = []
@@ -131,7 +132,7 @@ def neds(log=sys.stdout):
             if event["event_type"]["name"] != "Match":
                 continue
 
-            match_datetime = datetime.strptime(event["actual_start"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
+            game_time = datetime.strptime(event["actual_start"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
             try:
                 home, away = event["name"].split(" vs ")
             except ValueError:
@@ -165,9 +166,9 @@ def neds(log=sys.stdout):
                 if 'numerator' in prices and "denominator" in prices:
                     odds = prices['numerator'] / prices['denominator'] + 1
 
-                if outcome == "home": home_odds = odds
-                elif outcome == "away": away_odds = odds
-                elif outcome == "draw": draw_odds = odds
+                if outcome == "home": home_odds = float(odds)
+                elif outcome == "away": away_odds = float(odds)
+                elif outcome == "draw": draw_odds = float(odds)
 
             game_data.append({
                 "competition": unidecode(comp),
@@ -180,12 +181,13 @@ def neds(log=sys.stdout):
                 "home_active": home_active,
                 "away_active": away_active,
                 "draw_active": draw_active,
-                "match_datetime": int(match_datetime),
+                "game_time": int(game_time),
                 **cruft_fields
             })
         
     return game_data
-neds.name = "neds_1x2_scraper"
+neds.data_type = "match"
+neds.site = "neds"
 
 
 def ps3838(log=sys.stdout):
@@ -237,7 +239,7 @@ def ps3838(log=sys.stdout):
                 _ids.append(ps3838_id)
                 home = match_data[1]
                 away = match_data[2]
-                match_datetime = match_data[4] / 1000
+                game_time = match_data[4] / 1000
 
                 home_odds = away_odds = draw_odds = None
                 home_active = away_active = draw_active = None
@@ -250,7 +252,7 @@ def ps3838(log=sys.stdout):
                 
                 matches.append({
                     "competition": unidecode(f"{country} {comp}"),
-                    "site_id": str(ps3838_id),
+                    "site_id": int(ps3838_id),
                     "home_team": unidecode(home),
                     "away_team": unidecode(away),
                     "home_odds": home_odds,
@@ -259,12 +261,13 @@ def ps3838(log=sys.stdout):
                     "home_active": home_active,
                     "away_active": away_active,
                     "draw_active": draw_active,
-                    "match_datetime": int(match_datetime),
+                    "game_time": int(game_time),
                     **cruft_fields
                 })
                 
     return matches
-ps3838.name = "ps3838_1x2_scraper"
+ps3838.data_type = "match"
+ps3838.site = "ps3838"
 
 
 def palmerbet(log=sys.stdout):
@@ -293,15 +296,15 @@ def palmerbet(log=sys.stdout):
         
         if "draw" in match:
             if "win" in match["homeTeam"] and "price" in match["homeTeam"]["win"]:
-                home_odds = match["homeTeam"]["win"]["price"]
+                home_odds = float(match["homeTeam"]["win"]["price"])
             if "win" in match["awayTeam"] and "price" in match["awayTeam"]["win"]:
-                away_odds = match["awayTeam"]["win"]["price"]
+                away_odds = float(match["awayTeam"]["win"]["price"])
             if "price" in match["draw"]:
-                draw_odds = match["draw"]["price"]
+                draw_odds = float(match["draw"]["price"])
         
         comp = match["paths"][2]["title"]
 
-        match_datetime = datetime.strptime(match["startTime"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
+        game_time = datetime.strptime(match["startTime"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
 
         games.append({
             "competition": unidecode(comp),
@@ -314,12 +317,13 @@ def palmerbet(log=sys.stdout):
             "home_active": home_active,
             "away_active": away_active,
             "draw_active": draw_active,
-            "match_datetime": int(match_datetime),
+            "game_time": int(game_time),
             **cruft_fields
         })
     
     return games
-palmerbet.name = "palmerbet_1x2_scraper"
+palmerbet.data_type = "match"
+palmerbet.site = "palmerbet"
 
 
 def onex(log=sys.stdout):
@@ -348,14 +352,14 @@ def onex(log=sys.stdout):
                 home = match['O1']
                 away = match["O2"]
                 comp = match["L"]
-                match_datetime = match["S"]
+                game_time = match["S"]
                 home_odds = away_odds = draw_odds = None
                 home_active = away_active = draw_active = None
                 for prop in match["E"]:
                     p_type = prop["T"]
-                    if p_type == 1: home_odds = prop["C"]
-                    if p_type == 2: draw_odds = prop["C"]
-                    if p_type == 3: away_odds = prop["C"]
+                    if p_type == 1: home_odds = float(prop["C"])
+                    if p_type == 2: draw_odds = float(prop["C"])
+                    if p_type == 3: away_odds = float(prop["C"])
                     
                     if None not in [home_odds, draw_odds, away_odds]:
                         break
@@ -374,12 +378,13 @@ def onex(log=sys.stdout):
                 "home_active": home_active,
                 "away_active": away_active,
                 "draw_active": draw_active,
-                "match_datetime": int(match_datetime),
+                "game_time": int(game_time),
                 **cruft_fields
             })
     
     return games
-onex.name = "1x_1x2_scraper"
+onex.data_type = "match"
+onex.site = "onex"
 
 
 def interwetten(log=sys.stdout):
@@ -415,7 +420,7 @@ def interwetten(log=sys.stdout):
 
             bet_data = json.loads(bet_tr["data-betting"])
             interwetten_id = bet_data[0]
-            match_datetime = bet_data[-1] + 12 * 60 * 60
+            game_time = bet_data[-1] + 12 * 60 * 60
 
             home_odds = away_odds = draw_odds = None
             home = away = None
@@ -437,17 +442,18 @@ def interwetten(log=sys.stdout):
             
             games.append({
                 "competition": unidecode(comp),
-                "site_id": str(interwetten_id),
+                "site_id": int(interwetten_id),
                 "home_team": unidecode(home),
                 "away_team": unidecode(away),
                 "home_odds": home_odds,
                 "away_odds": away_odds,
                 "draw_odds": draw_odds,
-                "match_datetime": int(match_datetime),
+                "game_time": int(game_time),
                 **cruft_fields
             })
     return games
-interwetten.name = "interwetten_1x2_scraper"
+interwetten.data_type = "match"
+interwetten.site = "interwetten"
 
 
 def bluebet(log=sys.stdout):
@@ -474,34 +480,35 @@ def bluebet(log=sys.stdout):
                     continue
                 bluebet_id = game["MasterEventId"]
                 home, away = event_name.split(" v ")
-                match_datetime = datetime.strptime(
+                game_time = datetime.strptime(
                     game["MaxAdvertisedStartTime"][:-9],
                     "%Y-%m-%dT%H:%M:%S"
                 ).timestamp() + 10 * 60 * 60
                 home_odds = away_odds = draw_odds = None
                 for market in game["Markets"]:
                     name = market["OutcomeName"]
-                    if name == home: home_odds = market["Price"]
-                    elif name == away: away_odds = market["Price"]
-                    elif name == "Draw": draw_odds = market["Price"]
+                    if name == home: home_odds = float(market["Price"])
+                    elif name == away: away_odds = float(market["Price"])
+                    elif name == "Draw": draw_odds = float(market["Price"])
                     
                     if None not in [home_odds, away_odds, draw_odds]:
                         break
                 
                 games.append({
                     "competition": unidecode(f"{country} {comp}"),
-                    "site_id": str(bluebet_id),
+                    "site_id": bluebet_id,
                     "home_team": unidecode(home),
                     "away_team": unidecode(away),
                     "home_odds": home_odds,
                     "away_odds": away_odds,
                     "draw_odds": draw_odds,
-                    "match_datetime": int(match_datetime),
+                    "game_time": int(game_time),
                     **cruft_fields
                 })
     
     return games
-bluebet.name = "bluebet_1x2_scraper"
+bluebet.data_type = "match"
+bluebet.site = "bluebet"
 
 
 def playup(log=sys.stdout):
@@ -541,7 +548,7 @@ def playup(log=sys.stdout):
                             and " v " in event["attributes"]["name"]:
                 playup_id = event["id"]
                 home, away = event["attributes"]["name"].split(" v ")
-                match_datetime = datetime.strptime(event["attributes"]["start_time"][:-6], "%Y-%m-%dT%H:%M:%S").timestamp() + 10 * 60 * 60
+                game_time = datetime.strptime(event["attributes"]["start_time"][:-6], "%Y-%m-%dT%H:%M:%S").timestamp() + 10 * 60 * 60
                 comp = event["attributes"]["competition"]["name"]
                 if event["relationships"]["primary_market_group"]["data"] is None:
                     continue
@@ -549,9 +556,9 @@ def playup(log=sys.stdout):
                 games[playup_id] = {
                     "home_team": unidecode(home),
                     "away_team": unidecode(away),
-                    "match_datetime": int(match_datetime),
+                    "game_time": int(game_time),
                     "competition": comp,
-                    "site_id": str(playup_id),
+                    "site_id": int(playup_id),
                     "_market_group_id": market_group_id
                 }
         
@@ -607,7 +614,8 @@ def playup(log=sys.stdout):
                 del yield_game["_market_group_id"]
                 all_games.append(yield_game)
     return all_games
-playup.name = "playup_1x2_scraper"
+playup.data_type = "match"
+playup.site = "playup"
 
 
 with open(r"src/Scrapers/bf_post.json", "r") as fp:
@@ -658,12 +666,12 @@ def betfair(log=sys.stdout):
             market_1x2 = market_1x2[0]
             event_name = event['event']["eventName"]
             home_team, away_team = event_name.split(" v ")
-            match_datetime = int(datetime.strptime(event["event"]["openDate"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+            game_time = int(datetime.strptime(event["event"]["openDate"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
             competition = competition_map[event["eventId"]]
 
-            odds_data = {"home_odds": [], "home_volume": [], "home_odds_lay": [], "home_volume_lay": [],
-            "away_odds": [], "away_volume": [], "away_odds_lay": [], "away_volume_lay": [],
-            "draw_odds": [], "draw_volume": [], "draw_odds_lay": [], "draw_volume_lay": []}
+            odds_data = {"home_odds_back": [], "home_volume_back": [], "home_odds_lay": [], "home_volume_lay": [],
+            "away_odds_back": [], "away_volume_back": [], "away_odds_lay": [], "away_volume_lay": [],
+            "draw_odds_back": [], "draw_volume_back": [], "draw_odds_lay": [], "draw_volume_lay": []}
 
             for runner in market_1x2["runners"]:
                 runner_name = runner["description"]["runnerName"]
@@ -671,9 +679,10 @@ def betfair(log=sys.stdout):
                 if runner_name == away_team: runner_type = "away"
                 if runner_name == "The Draw": runner_type = "draw"
                 
-                for market in runner["exchange"]["availableToBack"]:
-                    odds_data[f"{runner_type}_odds"].append(market["price"])
-                    odds_data[f"{runner_type}_volume"].append(market["size"])
+                if "availableToBack" in runner["exchange"]:
+                    for market in runner["exchange"]["availableToBack"]:
+                        odds_data[f"{runner_type}_odds_back"].append(market["price"])
+                        odds_data[f"{runner_type}_volume_back"].append(market["size"])
                 if "availableToLay" in runner["exchange"]:
                     for market in runner["exchange"]["availableToLay"]:
                         odds_data[f"{runner_type}_odds_lay"].append(market["price"])
@@ -682,7 +691,7 @@ def betfair(log=sys.stdout):
             games.append({
                 "home_team": home_team,
                 "away_team": away_team,
-                "match_datetime": match_datetime,
+                "game_time": game_time,
                 "competition": competition,
                 "site_id": event["eventId"],
                 "total_matched": market_1x2["state"]["totalMatched"],
@@ -699,7 +708,8 @@ def betfair(log=sys.stdout):
     #     json.dump(games, fp, indent=4)
 
     return games
-betfair.name = "betfair_1x2_scraper"
+betfair.data_type = "match"
+betfair.site = "betfair"
 
 
 def scraper_data(_scraper, list_loc, log):

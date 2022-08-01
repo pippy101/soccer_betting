@@ -32,8 +32,8 @@ def parse_forebet(url, list_loc, log):
     
     cruft_fields = {"time_of_collection": time_of_collection, "site": "forebet"}
     for match in raw_data[0]:
-        match_datetime = datetime.strptime(match["DATE_BAH"], "%Y-%m-%d %H:%M:%S").timestamp() + 8 * 60 * 60
-        forebet_id = match["id"]
+        game_time = datetime.strptime(match["DATE_BAH"], "%Y-%m-%d %H:%M:%S").timestamp() + 8 * 60 * 60
+        forebet_id = int(match["id"])
         home = unidecode(match["HOST_NAME"])
         away = unidecode(match["GUEST_NAME"])
         league_info = raw_data[1][match["league_id"]]
@@ -50,7 +50,7 @@ def parse_forebet(url, list_loc, log):
             "away_team": away,
             "competition": comp,
             "site_id": forebet_id,
-            "match_datetime": match_datetime,
+            "game_time": game_time,
             "round_no": round_no,
             "home_pred": home_pred,
             "away_pred": away_pred,
@@ -69,4 +69,5 @@ def predictions(log=sys.stdout):
     gevent.wait(jobs)
     
     return predictions
-predictions.name = "forebet_predictions"
+predictions.data_type = "predictions"
+predictions.site = "forebet"

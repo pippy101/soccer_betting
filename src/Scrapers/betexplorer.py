@@ -70,7 +70,7 @@ def get_metadata(date, metadata, site_ids, log=sys.stdout):
                 continue
 
             match_date_string = attrs["data-dt"]
-            match_datetime = datetime.strptime(match_date_string, "%d,%m,%Y,%H,%M").timestamp()
+            game_time = datetime.strptime(match_date_string, "%d,%m,%Y,%H,%M").timestamp()
             
             game_completed = True
             game_stage = None
@@ -96,7 +96,7 @@ def get_metadata(date, metadata, site_ids, log=sys.stdout):
             metadata.append({
                 "time_of_collection": time_of_collection,
                 "site": "betexplorer",
-                "match_datetime": match_datetime + 8 * 60 * 60,
+                "game_time": game_time + 8 * 60 * 60,
                 "site_id": explorer_id,
                 "competition": unidecode(comp),
                 "home_team": unidecode(home),
@@ -116,4 +116,5 @@ def outcomes(log=sys.stdout):
     gevent.wait(jobs)
 
     return metadata
-outcomes.name = "betexplorer outcomes"
+outcomes.data_type = "outcomes"
+outcomes.site = "betexplorer"

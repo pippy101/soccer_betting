@@ -20,9 +20,9 @@ pregame_url_format = "https://api.sofascore.com/api/v1/event/{_id}/pregame-form"
 h2h_url_format = "https://api.sofascore.com/api/v1/event/{_id}/h2h"
 odds_url_format = "https://api.sofascore.com/api/v1/event/{_id}/provider/1/winning-odds"
 result_map = {
-    "W": 1,
-    "D": 0,
-    "L": -1
+    "W": 2,
+    "D": 1,
+    "L": 0
 }
 
 
@@ -49,8 +49,8 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
 
     metadata = list(map(
         lambda game: {
-            "match_datetime": game["startTimestamp"],
-            "site_id": str(game["id"]),
+            "game_time": game["startTimestamp"],
+            "site_id": int(game["id"]),
             "competition": unidecode(game["tournament"]["uniqueTournament"]["name"]),
             "home_team": unidecode(game["homeTeam"]["name"]),
             "away_team": unidecode(game["awayTeam"]["name"]),
@@ -167,7 +167,8 @@ def votes(*args, **kwargs):
         }
     
     return base_doc
-votes.name = "sofascore_votes"
+votes.data_type = "votes"
+votes.site = "sofascore"
 
 @async_sofascore_scraper(pregame_url_format, "pregame")
 def pregame(*args, **kwargs):
@@ -176,8 +177,8 @@ def pregame(*args, **kwargs):
     away_doc = raw_pregame["awayTeam"]
     base_doc = {"home_rating": None, "home_pos": None, "home_value": None,
         "away_rating": None, "away_pos": None, "away_value": None,
-        'home_res_1': None, 'home_res_2': None, 'home_res_3': None, 'home_res_4': None, 'home_res_5': None,
-        'away_res_1': None, 'away_res_2': None, 'away_res_3': None, 'away_res_4': None, 'away_res_5': None}
+        "home_res": [None for i in range(5)], "away_res": [None for i in range(5)]}
+
     if "avgRating" in home_doc:
         base_doc["home_rating"] = float(home_doc["avgRating"])
         base_doc["away_rating"] = float(away_doc["avgRating"])
@@ -195,10 +196,11 @@ def pregame(*args, **kwargs):
             for res_idx, result in enumerate(raw_pregame[f"{team}Team"]["form"]):
                 if result not in result_map:
                     continue
-                base_doc[f"{team}_res_{res_idx+1}"] = result_map[result]
+                base_doc[f"{team}_res"][res_idx] = result_map[result]
     
     return base_doc
-pregame.name = "sofascore pregame"
+pregame.data_type = "pregame_form"
+pregame.site = "sofascore"
 
 @async_sofascore_scraper(h2h_url_format, "h2h")
 def h2h(*args, **kwargs):
@@ -219,7 +221,8 @@ def h2h(*args, **kwargs):
         base_doc["draws_man"] = man_doc["draws"]
     
     return base_doc
-h2h.name = "sofascore h2h"
+h2h.data_type = "h2h"
+h2h.site = "sofascore"
 
 @async_sofascore_scraper(h2h_url_format, "odds")
 def odds(*args, **kwargs):
@@ -233,4 +236,5 @@ def odds(*args, **kwargs):
             base_doc[f"{team_type}_actual"] = raw_odds[team_type]["actual"]
     
     return base_doc
-odds.name = "sofascore odds"
+odds.data_type = "odds"
+odds.site = "sofascore"
