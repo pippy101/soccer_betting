@@ -19,9 +19,10 @@ from Scrapers.scrapers import scrapers
 from log import log
 import match
 
-NON_DATA_FIELDS = ["home_team", "away_team", "competition", "game_time", 
+NON_DATA_FIELDS = ["home_team", "away_team", "competition",
     "site_id", "site", "data_type"]
-ONETIME_FIELDS = ["time_of_collection"]
+ONETIME_FIELDS = ["time_of_collection", "game_time"]
+DATA_LIMIT = timedelta(days=3)
 
 
 def add_list(func, list_loc, kwargs={}):
@@ -123,11 +124,7 @@ def load_data_config(games):
 def scrape_main(cur, setup=True):
 
     reset = False
-    games = get_all_data(scrapers)#json.load(open(r"test/all_data.json"))#
-    #games = games[::50]
-    for game in games:
-        game["game_time"] = datetime.fromtimestamp(game["game_time"])
-        game["time_of_collection"] = datetime.fromtimestamp(game["time_of_collection"])
+    games = get_all_data(scrapers)
     
     data_type_config, datatype_tree, all_cols = load_data_config(games)
 
@@ -193,15 +190,34 @@ def scrape_main(cur, setup=True):
             FOREIGN KEY (game_id) REFERENCES global_lookup(game_id),
             time_of_collection timestamp,
             PRIMARY KEY (game_id, time_of_collection),
+            game_time timestamp,
             {})""".format(',\n'.join([f"{k} {v}" for k, v in all_cols.items()])))
         else:
             # fill in extra column names
             cur.execute("SELECT * FROM data LIMIT 0")
             columns = set([desc[0] for desc in cur.description])
-            missing_columns = columns ^ set(all_cols.keys()) ^ set(["game_id", "time_of_collection"])
-            missing_columns = [col for col in all_cols.keys() if col not in columns and col not in ["game_id", "time_of_collection"]]
+            missing_columns = columns ^ set(all_cols.keys()) ^ set(["game_id", "time_of_collection", "game_time"])
+            missing_columns = [col for col in all_cols.keys() if col not in columns and col not in ["game_id", "time_of_collection", "game_time"]]
             if missing_columns != []:
                 cur.execute("""ALTER TABLE data
+                {}""".format(',\n'.join([f"ADD COLUMN {col} {all_cols[col]}" for col in missing_columns])))
+        
+        if "small_data" not in table_names:
+            cur.execute("""CREATE TABLE small_data (
+            game_id integer,
+            FOREIGN KEY (game_id) REFERENCES global_lookup(game_id),
+            time_of_collection timestamp,
+            PRIMARY KEY (game_id, time_of_collection),
+            game_time timestamp,
+            {})""".format(',\n'.join([f"{k} {v}" for k, v in all_cols.items()])))
+        else:
+            # fill in extra column names
+            cur.execute("SELECT * FROM data LIMIT 0")
+            columns = set([desc[0] for desc in cur.description])
+            missing_columns = columns ^ set(all_cols.keys()) ^ set(["game_id", "time_of_collection", "game_time"])
+            missing_columns = [col for col in all_cols.keys() if col not in columns and col not in ["game_id", "time_of_collection", "game_time"]]
+            if missing_columns != []:
+                cur.execute("""ALTER TABLE small_data
                 {}""".format(',\n'.join([f"ADD COLUMN {col} {all_cols[col]}" for col in missing_columns])))
         
         if 'outcomes' not in table_names:
@@ -256,9 +272,8 @@ def scrape_main(cur, setup=True):
     # match the rest
     cur.execute("SELECT count(*) FROM global_lookup")
     min_id = cur.fetchall()[0][0]
-    start = time.time()
     matched_games = match.group_by_match(unmatched_games, min_id, existing_matches=copy(existing_games))
-    print(f"Found {len(matched_games)-no_existing_games:,} new, unqiue games in {round(time.time()-start,2)}s")
+    print(f"Found {len(matched_games)-no_existing_games:,} new games and {no_existing_games:,} inserted games")
     new_games = {k:v for k, v in matched_games.items() if k not in existing_games}
     # update _id lookup table and metadata table #
     # insert game_ids into global_lookup
@@ -309,7 +324,8 @@ def scrape_main(cur, setup=True):
         for global_id, _games in matched_games.items()}
     # concat dicts, and fetch data
     data = []
-    columns = ["game_id", 'time_of_collection', *all_cols]
+    small_data = []
+    columns = ["game_id", 'time_of_collection', "game_time", *all_cols]
     for game_id, _games in matched_games.items():
         _game = {}
         _game["game_id"] = game_id
@@ -324,10 +340,15 @@ def scrape_main(cur, setup=True):
                 elif field != "data_type" and field != "site":
                     _game[f"{data_type}_{site}_{field}"] = site_data[field]
         
-        data.append(none_getter(_game, columns))
-    
+        none_got = none_getter(_game, columns)
+        data.append(none_got)
+        if _game["game_time"] - game["time_of_collection"] < DATA_LIMIT:
+            small_data.append(none_got)
+
     insert_query = "INSERT INTO data ({}) VALUES %s ON CONFLICT DO NOTHING".format(','.join(columns))
     execute_values(cur, insert_query, data)
+    insert_query = "INSERT INTO small_data ({}) VALUES %s ON CONFLICT DO NOTHING".format(','.join(columns))
+    execute_values(cur, insert_query, small_data)
 
     print("--- Inserted data ---")
 
@@ -340,10 +361,11 @@ try:
     conn = psycopg2.connect(**conn_config)
     cur = conn.cursor()
 
-    LOOP_LENGTH = 50
+    LOOP_LENGTH = 10 * 60
+    setup = True
     while True:
         start = time.time()
-        scrape_main(cur)
+        scrape_main(cur, setup=setup)
         conn.commit()
         time_taken = time.time() - start
         sleep_time = LOOP_LENGTH-time_taken
@@ -352,6 +374,7 @@ try:
             time.sleep(1)
             sleep_time -=1
         print('\n')
+        setup = False
 
 except (Exception, psycopg2.DatabaseError) as error:
     if conn is not None:
