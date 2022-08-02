@@ -36,7 +36,7 @@ def get_resp(url, log, headers=headers, cookies=cookies):
 
 def get_metadata(date, metadata, site_ids, log=sys.stdout):
     url = date.strftime(outcome_url_format)
-    time_of_collection = int(datetime.utcnow().timestamp())
+    time_of_collection = datetime.utcnow()
     page_response = get_resp(url, log)
     if page_response is None: return
     page_content = page_response.content
@@ -96,7 +96,7 @@ def get_metadata(date, metadata, site_ids, log=sys.stdout):
             metadata.append({
                 "time_of_collection": time_of_collection,
                 "site": "betexplorer",
-                "game_time": game_time + 8 * 60 * 60,
+                "game_time": datetime.fromtimestamp(game_time + 8 * 60 * 60),
                 "site_id": explorer_id,
                 "competition": unidecode(comp),
                 "home_team": unidecode(home),

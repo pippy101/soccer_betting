@@ -49,7 +49,7 @@ def tab(log=sys.stdout):
     else: raw_data = resp.json()
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -103,7 +103,7 @@ def tab(log=sys.stdout):
                     "home_active": home_active,
                     "away_active": away_active,
                     "draw_active": draw_active,
-                    "game_time": int(game_time),
+                    "game_time": datetime.fromtimestamp(game_time),
                     **cruft_fields
                 })
 
@@ -122,7 +122,7 @@ def neds(log=sys.stdout):
     else: raw_data = resp.json()
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -181,7 +181,7 @@ def neds(log=sys.stdout):
                 "home_active": home_active,
                 "away_active": away_active,
                 "draw_active": draw_active,
-                "game_time": int(game_time),
+                "game_time": datetime.fromtimestamp(game_time),
                 **cruft_fields
             })
         
@@ -202,7 +202,7 @@ def ps3838(log=sys.stdout):
     matches = []
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -261,7 +261,7 @@ def ps3838(log=sys.stdout):
                     "home_active": home_active,
                     "away_active": away_active,
                     "draw_active": draw_active,
-                    "game_time": int(game_time),
+                    "game_time": datetime.fromtimestamp(game_time),
                     **cruft_fields
                 })
                 
@@ -275,7 +275,7 @@ def palmerbet(log=sys.stdout):
     url = "https://fixture.palmerbet.online/fixtures/sports/b4073512-cdd5-4953-950f-3f7ad31fa955/matches?sportType=soccer&pageSize=1000&channel=website"
     
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -317,7 +317,7 @@ def palmerbet(log=sys.stdout):
             "home_active": home_active,
             "away_active": away_active,
             "draw_active": draw_active,
-            "game_time": int(game_time),
+            "game_time": datetime.fromtimestamp(game_time),
             **cruft_fields
         })
     
@@ -336,7 +336,7 @@ def onex(log=sys.stdout):
         ]
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
     
@@ -378,7 +378,7 @@ def onex(log=sys.stdout):
                 "home_active": home_active,
                 "away_active": away_active,
                 "draw_active": draw_active,
-                "game_time": int(game_time),
+                "game_time": datetime.fromtimestamp(game_time),
                 **cruft_fields
             })
     
@@ -392,7 +392,7 @@ def interwetten(log=sys.stdout):
     url = "https://www.interwetten.com/en/sport/upcoming?hours=48"
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -448,7 +448,7 @@ def interwetten(log=sys.stdout):
                 "home_odds": home_odds,
                 "away_odds": away_odds,
                 "draw_odds": draw_odds,
-                "game_time": int(game_time),
+                "game_time": datetime.fromtimestamp(game_time),
                 **cruft_fields
             })
     return games
@@ -461,7 +461,7 @@ def bluebet(log=sys.stdout):
     url = "https://web20-api.bluebet.com.au/MasterCategory?EventTypeId=100&WithLevelledMarkets=true"
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -502,7 +502,7 @@ def bluebet(log=sys.stdout):
                     "home_odds": home_odds,
                     "away_odds": away_odds,
                     "draw_odds": draw_odds,
-                    "game_time": int(game_time),
+                    "game_time": datetime.fromtimestamp(game_time),
                     **cruft_fields
                 })
     
@@ -517,7 +517,7 @@ def playup(log=sys.stdout):
     paginated_url = "https://wagering-api.playup.io/v1/sport_events?include=primary_market_group.markets.selections,participants,sportcast_fixture&filter%5Bstatus_id%5D=1%2C7&page%5Bnumber%5D={page_no}&page%5Bsize%5D=200"
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
 
@@ -556,7 +556,7 @@ def playup(log=sys.stdout):
                 games[playup_id] = {
                     "home_team": unidecode(home),
                     "away_team": unidecode(away),
-                    "game_time": int(game_time),
+                    "game_time": datetime.fromtimestamp(game_time),
                     "competition": comp,
                     "site_id": int(playup_id),
                     "_market_group_id": market_group_id
@@ -643,7 +643,7 @@ def betfair(log=sys.stdout):
     competition_map = {event["eventId"]: competition_ids[str(event["competitionId"])]["name"] for event in search_results["results"]}
 
     cruft_fields = {
-        "time_of_collection": int(datetime.utcnow().timestamp()),
+        "time_of_collection": datetime.utcnow(),
         "site": site
     }
     # betfair only returns a max of 25 games per request
@@ -691,7 +691,7 @@ def betfair(log=sys.stdout):
             games.append({
                 "home_team": home_team,
                 "away_team": away_team,
-                "game_time": game_time,
+                "game_time": datetime.fromtimestamp(game_time),
                 "competition": competition,
                 "site_id": event["eventId"],
                 "total_matched": market_1x2["state"]["totalMatched"],

@@ -22,7 +22,7 @@ def parse_forebet(url, list_loc, log):
     try:
         with requests.get(url, headers=headers) as resp:
             if resp.status_code == 200:
-                time_of_collection = int(datetime.utcnow().timestamp())
+                time_of_collection = datetime.utcnow()
                 raw_data = resp.json()
             else:
                 log.write(f"Forebet scraper failed with status code: {resp.status_code}, link: {resp.url}")
@@ -50,7 +50,7 @@ def parse_forebet(url, list_loc, log):
             "away_team": away,
             "competition": comp,
             "site_id": forebet_id,
-            "game_time": game_time,
+            "game_time": datetime.fromtimestamp(game_time),
             "round_no": round_no,
             "home_pred": home_pred,
             "away_pred": away_pred,

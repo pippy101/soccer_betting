@@ -49,7 +49,7 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
 
     metadata = list(map(
         lambda game: {
-            "game_time": game["startTimestamp"],
+            "game_time": datetime.fromtimestamp(game["startTimestamp"]),
             "site_id": int(game["id"]),
             "competition": unidecode(game["tournament"]["uniqueTournament"]["name"]),
             "home_team": unidecode(game["homeTeam"]["name"]),
@@ -94,7 +94,7 @@ def sofascore_scraper(url_format, name, show_progress=False):
                 with scraper.get(url, headers=headers) as resp:
                     if resp.status_code == 200:
                         raw = resp.json()
-                        data.append(metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": int(datetime.utcnow().timestamp())})
+                        data.append(metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": datetime.utcnow()})
                         if show_progress:
                             log.write(f"Completed {game_idx+1} / {len_metadata} for sofascore {name}")
                             
@@ -144,7 +144,7 @@ def async_sofascore_scraper(url_format, name, show_progress=False):
                 for idx, url in enumerate(urls)]
             gevent.wait(jobs)
             
-            data = [metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": int(datetime.utcnow().timestamp())}
+            data = [metadata[game_idx] | func(raw_data=raw) | {"time_of_collection": datetime.utcnow()}
                 for game_idx, raw in raw_data]
 
             return data
