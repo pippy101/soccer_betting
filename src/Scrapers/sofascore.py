@@ -15,6 +15,8 @@ no_days = sofascore_config["days"]
 scrape_all = sofascore_config["all"]
 
 date_url = "https://api.sofascore.com/api/v1/sport/football/scheduled-events/{date}"
+all_date_url = "https://api.sofascore.com/api/v1/sport/football/scheduled-events/{date}/inverse"
+
 vote_url_format = "https://api.sofascore.com/api/v1/event/{_id}/votes"
 pregame_url_format = "https://api.sofascore.com/api/v1/event/{_id}/pregame-form"
 h2h_url_format = "https://api.sofascore.com/api/v1/event/{_id}/h2h"
@@ -39,6 +41,8 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
     dates = [(datetime.now() + timedelta(days=day)).strftime("%Y-%m-%d")\
         for day in days]
     urls = {date: date_url.format(date=date) for date in dates}
+    if all:
+        urls = urls | {date: all_date_url.format(date=date) for date in dates}
 
     for date in urls:
         with cfscraper.get(urls[date], headers=headers, timeout=10) as resp:
