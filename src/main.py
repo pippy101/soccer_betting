@@ -48,6 +48,7 @@ def py_sql_types(data_entry, list_str=""):
     if _type == float: return f"float{list_str}"
     if _type == str: return f"text{list_str}"
     if _type == bool: return f"boolean{list_str}"
+    if _type == datetime: return f"timestamp{list_str}"
     if _type == list:
         list_str += "[]"
         return py_sql_types(data_entry[0], list_str=list_str)
@@ -362,10 +363,9 @@ try:
     cur = conn.cursor()
 
     LOOP_LENGTH = 10 * 60
-    setup = True
     while True:
         start = time.time()
-        scrape_main(cur, setup=setup)
+        scrape_main(cur)
         conn.commit()
         time_taken = time.time() - start
         sleep_time = LOOP_LENGTH-time_taken
@@ -374,7 +374,6 @@ try:
             time.sleep(1)
             sleep_time -=1
         print('\n')
-        setup = False
 
 except (Exception, psycopg2.DatabaseError) as error:
     if conn is not None:
