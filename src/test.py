@@ -28,7 +28,6 @@ functions = [betexplorer.outcomes, forebet.predictions,
         odds.ps3838, odds.palmerbet,
         odds.onex, odds.interwetten,
         odds.playup, odds.betfair]
-functions = [sofascore.votes]
 
 jobs = [gevent.spawn(get_data, _func, games) for _func in functions]
 gevent.wait(jobs)
