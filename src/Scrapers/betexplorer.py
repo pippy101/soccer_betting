@@ -1,5 +1,6 @@
 """
 outcomes give list of scores (for both live and finished games)
+returns None for home and away score, in the case of postponed or similar
 """
 
 import gevent
@@ -89,8 +90,9 @@ def get_metadata(date, metadata, site_ids, log=sys.stdout):
                     continue
                 score_text = re.sub("[A-Z.]+", "", score_elem.get_text())  # to parse stuff like "1:2 PEN." or "POST."
                 if score_text == "":
-                    continue
-                home_score, away_score = map(int, score_text.split(":"))
+                    home_score = away_score = None
+                else:
+                    home_score, away_score = map(int, score_text.split(":"))
             
             site_ids.append(explorer_id)
             metadata.append({

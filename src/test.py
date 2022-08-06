@@ -32,9 +32,9 @@ functions = [betexplorer.outcomes, forebet.predictions,
 jobs = [gevent.spawn(get_data, _func, games) for _func in functions]
 gevent.wait(jobs)
 
-json.dump(games, open(r"test/all_data.json", "w"), indent=4)
+json.dump(games, open(r"test/all_data.json", "w"), indent=4, default=str)
 matched = match.group_by_match(games, -1)
 sorted_keys = sorted(matched, key=lambda k: len(matched[k]), reverse=True)
 sorted_matches = {k:matched[k] for k in sorted_keys}
-json.dump(sorted_matches, open(r"test/all_data_grouped.json", "w"), indent=4)
+json.dump(sorted_matches, open(r"test/all_data_grouped.json", "w"), indent=4, default=str)
 print(f"Found {len(matched):,} unique games")

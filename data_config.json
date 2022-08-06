@@ -48,5 +48,6 @@
     "away_odds_back": "float[]",
     "away_volume_back": "float[]",
     "draw_odds_back": "float[]",
-    "draw_volume_back": "float[]"
+    "draw_volume_back": "float[]",
+    "game_time": "timestamp"
 }
