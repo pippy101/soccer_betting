@@ -2,6 +2,10 @@
 create an empty database and put the username, password, db name etc. in conn_config.json
 this script should do the rest
 you can hardcode data_types in data config, if you really wish
+
+note: for some reason, one game was able to get in the db without having a site_id
+      without a runtime error or nuthin
+      i dont even know *how* but it is quite worrying
 """
 
 import gevent 
@@ -78,6 +82,18 @@ def concat_dicts(list_of_dicts):
     for _dict in list_of_dicts:
         concat_dict = concat_dict | _dict
     return concat_dict
+
+
+def count_nulls(cur):
+    sites = set([scraper.site for scraper in scrapers])
+    cur.execute(f"""UPDATE global_lookup
+SET no_sites=count_table.no_sites
+FROM global_lookup g_lookup
+JOIN (SELECT game_id, 
+{'+'.join([f'CASE WHEN {site}_id IS NOT NULL THEN 1 ELSE 0 END' for site in sites])} as no_sites
+FROM global_lookup) as count_table
+ON g_lookup.game_id=count_table.game_id
+WHERE global_lookup.game_id=count_table.game_id""")
 
 
 def load_data_config(games):
@@ -167,6 +183,7 @@ def scrape_main(cur, setup=True):
             away_team text not null,
             competition text not null,
             game_time timestamp not null,
+            no_sites integer,
             {site_ids})""".format(site_ids=',\n'.join([f"{site}_id {_type}" for site, _type in site_id_type.items()])))
             # add foreign key constraints once other tables have been created
             for site, _type in site_id_type.items():
@@ -350,6 +367,8 @@ def scrape_main(cur, setup=True):
     execute_values(cur, insert_query, data)
     insert_query = "INSERT INTO small_data ({}) VALUES %s ON CONFLICT DO NOTHING".format(','.join(columns))
     execute_values(cur, insert_query, small_data)
+
+    count_nulls(cur)
 
     print("--- Inserted data ---")
 
