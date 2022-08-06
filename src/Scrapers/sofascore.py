@@ -8,7 +8,9 @@ import cfscrape
 import sys
 import gevent
 
-sofascore_config = {"days": 3, "all": True}
+# scraping *all* games from sofascore scrapes a *lot* of games
+# and is very slow
+sofascore_config = {"days": 3, "all": False}
 
 headers = {"accept-encoding": "gzip, deflate, br"}
 no_days = sofascore_config["days"]
@@ -41,8 +43,8 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
     dates = [(datetime.now() + timedelta(days=day)).strftime("%Y-%m-%d")\
         for day in days]
     urls = {date: date_url.format(date=date) for date in dates}
-    if all:
-        urls = urls | {date: all_date_url.format(date=date) for date in dates}
+    if scrape_all:
+        urls = urls | {date + "_inverse": all_date_url.format(date=date) for date in dates}
 
     for date in urls:
         with cfscraper.get(urls[date], headers=headers, timeout=10) as resp:
@@ -55,7 +57,7 @@ def get_sofascore_metadata(cfscraper=None, days=range(no_days), log=sys.stdout):
         lambda game: {
             "game_time": datetime.fromtimestamp(game["startTimestamp"]),
             "site_id": int(game["id"]),
-            "competition": unidecode(game["tournament"]["uniqueTournament"]["name"]),
+            "competition": unidecode(game["tournament"]["name"]),
             "home_team": unidecode(game["homeTeam"]["name"]),
             "away_team": unidecode(game["awayTeam"]["name"]),
             "time_of_collection": None,
