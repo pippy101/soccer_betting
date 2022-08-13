@@ -129,62 +129,62 @@ def neds(log=sys.stdout):
 
     game_data = []
     for event_id in raw_data["events"]:
-            event = raw_data["events"][event_id]
-            if event["event_type"]["name"] != "Match":
-                continue
+        event = raw_data["events"][event_id]
+        if event["event_type"]["name"] != "Match":
+            continue
 
-            game_time = datetime.strptime(event["actual_start"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
-            try:
-                home, away = event["name"].split(" vs ")
-            except ValueError:
-                continue
-            home_active = away_active = draw_active = event["match_status"] == "BettingOpen"
+        game_time = datetime.strptime(event["actual_start"], "%Y-%m-%dT%H:%M:%SZ").timestamp() + 10 * 60 * 60
+        try:
+            home, away = event["name"].split(" vs ")
+        except ValueError:
+            continue
+        home_active = away_active = draw_active = event["match_status"] == "BettingOpen"
 
-            main_markets = event["main_markets"]
-            market_id = main_markets[0]
-            entrant_ids = raw_data["markets"][market_id]["entrant_ids"]
+        main_markets = event["main_markets"]
+        market_id = main_markets[0]
+        entrant_ids = raw_data["markets"][market_id]["entrant_ids"]
+        
+        if "competition" not in event:
+            continue
+        
+        # country = event["competition"]["region"]
+        comp = event["competition"]["name"]
+        
+        home_odds = away_odds = draw_odds = None
+        for entrant_id in entrant_ids:
+            entrant = raw_data["entrants"][entrant_id]
+            outcome = entrant["name"]
+            if outcome != "Draw":
+                if "home_away" not in entrant:
+                    continue
+                outcome = entrant["home_away"]
+            outcome = outcome.lower()
+
+            price_id = f"{entrant_id}{price_hash}"
             
-            if "competition" not in event:
-                continue
-            
-            # country = event["competition"]["region"]
-            comp = event["competition"]["name"]
-            
-            home_odds = away_odds = draw_odds = None
-            for entrant_id in entrant_ids:
-                entrant = raw_data["entrants"][entrant_id]
-                outcome = entrant["name"]
-                if outcome != "Draw":
-                    if "home_away" not in entrant:
-                        continue
-                    outcome = entrant["home_away"]
-                outcome = outcome.lower()
+            prices = raw_data["prices"][price_id]["odds"]
 
-                price_id = f"{entrant_id}{price_hash}"
-                
-                prices = raw_data["prices"][price_id]["odds"]
+            if 'numerator' in prices and "denominator" in prices:
+                odds = prices['numerator'] / prices['denominator'] + 1
 
-                if 'numerator' in prices and "denominator" in prices:
-                    odds = prices['numerator'] / prices['denominator'] + 1
+            if outcome == "home": home_odds = float(odds)
+            elif outcome == "away": away_odds = float(odds)
+            elif outcome == "draw": draw_odds = float(odds)
 
-                if outcome == "home": home_odds = float(odds)
-                elif outcome == "away": away_odds = float(odds)
-                elif outcome == "draw": draw_odds = float(odds)
-
-            game_data.append({
-                "competition": unidecode(comp),
-                "site_id": str(event_id),
-                "home_team": unidecode(home),
-                "away_team": unidecode(away),
-                "home_odds": home_odds,
-                "away_odds": away_odds,
-                "draw_odds": draw_odds,
-                "home_active": home_active,
-                "away_active": away_active,
-                "draw_active": draw_active,
-                "game_time": datetime.fromtimestamp(game_time),
-                **cruft_fields
-            })
+        game_data.append({
+            "competition": unidecode(comp),
+            "site_id": str(event_id),
+            "home_team": unidecode(home),
+            "away_team": unidecode(away),
+            "home_odds": home_odds,
+            "away_odds": away_odds,
+            "draw_odds": draw_odds,
+            "home_active": home_active,
+            "away_active": away_active,
+            "draw_active": draw_active,
+            "game_time": datetime.fromtimestamp(game_time),
+            **cruft_fields
+        })
         
     return game_data
 neds.data_type = "match"
@@ -371,6 +371,9 @@ def onex(log=sys.stdout):
             except KeyError:
                 continue
             
+            if unidecode(home) == "Home (Goals)" or unidecode(away) == "Away (Goals)":
+                continue
+
             games.append({
                 "competition": unidecode(comp),
                 "site_id": str(oneX_id),
