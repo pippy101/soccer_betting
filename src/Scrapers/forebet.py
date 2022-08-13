@@ -25,9 +25,9 @@ def parse_forebet(url, list_loc, log):
                 time_of_collection = datetime.utcnow()
                 raw_data = resp.json()
             else:
-                log.write(f"Forebet scraper failed with status code: {resp.status_code}, link: {resp.url}")
+                log.write(f"Forebet scraper failed with status code: {resp.status_code}, link: {resp.url}\n")
     except requests.exceptions.ConnectionError:
-        log.write("Connection aborted error in forebet_scraper")
+        log.write("Connection aborted error in forebet_scraper\n")
         return
     
     cruft_fields = {"time_of_collection": time_of_collection, "site": "forebet"}

@@ -28,10 +28,10 @@ def get_resp(url, log, headers=headers, cookies=cookies):
             if resp.status_code == 200:
                 return resp
             else:
-                log.write(f"Betexplorer outcome scraper encountered status code {resp.status_code}")
+                log.write(f"Betexplorer outcome scraper encountered status code {resp.status_code}\n")
                 return
     except requests.exceptions.ConnectionError:
-        log.write("Connection aborted error")
+        log.write("Connection aborted error\n")
         return
 
 
