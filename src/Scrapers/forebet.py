@@ -71,3 +71,5 @@ def predictions(log=sys.stdout):
     return predictions
 predictions.data_type = "predictions"
 predictions.site = "forebet"
+predictions.output_types = {"round_no": "integer", "home_pred": "integer", 
+    "away_pred": "integer", "draw_pred": "integer", "avg_goals": "float"}

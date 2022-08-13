@@ -14,7 +14,6 @@ from datetime import datetime
 from unidecode import unidecode
 from bs4 import BeautifulSoup
 from math import ceil
-import time
 import requests
 import json
 import re
@@ -110,6 +109,8 @@ def tab(log=sys.stdout):
     return game_data
 tab.data_type = "match"
 tab.site = "tab"
+tab.output_types = {"home_odds": "float", "away_odds": "float", "draw_odds": "float",
+    "home_active": "bool", "away_active": "bool", "draw_active": "bool"}
 
 
 def neds(log=sys.stdout):
@@ -188,6 +189,7 @@ def neds(log=sys.stdout):
     return game_data
 neds.data_type = "match"
 neds.site = "neds"
+neds.output_types = tab.output_types
 
 
 def ps3838(log=sys.stdout):
@@ -268,6 +270,7 @@ def ps3838(log=sys.stdout):
     return matches
 ps3838.data_type = "match"
 ps3838.site = "ps3838"
+ps3838.output_types = tab.output_types
 
 
 def palmerbet(log=sys.stdout):
@@ -324,6 +327,7 @@ def palmerbet(log=sys.stdout):
     return games
 palmerbet.data_type = "match"
 palmerbet.site = "palmerbet"
+palmerbet.output_types = tab.output_types
 
 
 def onex(log=sys.stdout):
@@ -385,6 +389,7 @@ def onex(log=sys.stdout):
     return games
 onex.data_type = "match"
 onex.site = "onex"
+onex.output_types = tab.output_types
 
 
 def interwetten(log=sys.stdout):
@@ -454,6 +459,7 @@ def interwetten(log=sys.stdout):
     return games
 interwetten.data_type = "match"
 interwetten.site = "interwetten"
+interwetten.output_types = tab.output_types
 
 
 def bluebet(log=sys.stdout):
@@ -509,6 +515,7 @@ def bluebet(log=sys.stdout):
     return games
 bluebet.data_type = "match"
 bluebet.site = "bluebet"
+bluebet.output_types = tab.output_types
 
 
 def playup(log=sys.stdout):
@@ -616,6 +623,7 @@ def playup(log=sys.stdout):
     return all_games
 playup.data_type = "match"
 playup.site = "playup"
+playup.output_types = tab.output_types
 
 
 with open(r"src/Scrapers/bf_post.json", "r") as fp:
@@ -634,9 +642,6 @@ def betfair(log=sys.stdout):
             log.write(f"{site} encountered error code of {resp.status_code}: {search_url}\n")
             return {}
 
-    # with open(r"test/betfair/betfair_search.json", "w") as fp:
-    #     json.dump(search_results, fp, indent=4)
-
     market_ids = [event["marketId"] for event in search_results["results"]]
     competition_ids = search_results["attachments"]["competitions"]
     # event_id -> competition name
@@ -651,7 +656,6 @@ def betfair(log=sys.stdout):
     responses = []
     jobs = [gevent.spawn(add_get_page, get_url(market_ids[i*25:(i+1)*25]), log, site, responses) for i in range(int(ceil(len(market_ids) / 25)))]
     gevent.wait(jobs)
-    # i = 0
     games = []
     for resp in responses:
         if resp is None: continue
@@ -700,37 +704,10 @@ def betfair(log=sys.stdout):
                 **cruft_fields
             })
 
-        # i += 1
-        # with open(rf"test/betfair/betfair_page_{i}.json", "w") as fp:
-        #     json.dump(page, fp, indent=4)
-
-    # with open(rf"test/betfair/betfair_proc.json", "w") as fp:
-    #     json.dump(games, fp, indent=4)
-
     return games
 betfair.data_type = "match"
 betfair.site = "betfair"
-
-
-def scraper_data(_scraper, list_loc, log):
-    list_loc += _scraper(log=log)
-
-
-# returns 1-d list of games
-def get_all_data(log=sys.stdout):
-    scrapers = (
-        neds,
-        tab,
-        ps3838,
-        palmerbet,
-        onex,
-        interwetten,
-        bluebet,
-        playup,
-        betfair
-    )
-    data = []
-    jobs = [gevent.spawn(scraper_data, _scraper=_scraper, list_loc=data, log=log) for _scraper in scrapers]
-    gevent.wait(jobs)
-
-    return data
+betfair.output_types = {"home_odds_back": "float[]", "home_volume_back": "float[]", 
+    "home_odds_lay": "float[]", "home_volume_lay": "float[]",
+    "away_odds_back": "float[]", "away_volume_back": "float[]", "away_odds_lay": "float[]", "away_volume_lay": "float[]",
+    "draw_odds_back": "float[]", "draw_volume_back": "float[]", "draw_odds_lay": "float[]", "draw_volume_lay": "float[]"}

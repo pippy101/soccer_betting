@@ -10,6 +10,7 @@ import gevent
 
 # scraping *all* games from sofascore scrapes a *lot* of games
 # and is very slow
+# not anymore !
 sofascore_config = {"days": 3, "all": False}
 
 headers = {"accept-encoding": "gzip, deflate, br"}
@@ -175,14 +176,15 @@ def votes(*args, **kwargs):
     return base_doc
 votes.data_type = "votes"
 votes.site = "sofascore"
+votes.output_types = {"home_votes": "integer", "away_votes": "integer", "draw_votes": "integer"}
 
 @async_sofascore_scraper(pregame_url_format, "pregame")
 def pregame(*args, **kwargs):
     raw_pregame = kwargs["raw_data"]
     home_doc = raw_pregame["homeTeam"]
     away_doc = raw_pregame["awayTeam"]
-    base_doc = {"home_rating": None, "home_pos": None, "home_value": None,
-        "away_rating": None, "away_pos": None, "away_value": None,
+    base_doc = {"home_rating": None, "home_pos": None, "home_pts": None,
+        "away_rating": None, "away_pos": None, "away_pts": None,
         "home_res": [None for i in range(5)], "away_res": [None for i in range(5)]}
 
     if "avgRating" in home_doc:
@@ -207,6 +209,10 @@ def pregame(*args, **kwargs):
     return base_doc
 pregame.data_type = "pregame_form"
 pregame.site = "sofascore"
+pregame.output_types = {"home_rating": "float", "home_pos": "integer", "home_pts": "integer",
+    "away_rating": "integer", "away_pos": "integer", "away_pts": "integer",
+    "home_res": "smallint[5]", "away_res": "smallint[5]"}
+
 
 @async_sofascore_scraper(h2h_url_format, "h2h")
 def h2h(*args, **kwargs):
@@ -229,6 +235,8 @@ def h2h(*args, **kwargs):
     return base_doc
 h2h.data_type = "h2h"
 h2h.site = "sofascore"
+h2h.output_types = {"home_wins": "integer", "away_wins": "integer", "draws": "integer",
+    "home_wins_man": "integer", "away_wins_man": "integer", "draws_man": "integer"}
 
 @async_sofascore_scraper(h2h_url_format, "odds")
 def odds(*args, **kwargs):
@@ -244,3 +252,5 @@ def odds(*args, **kwargs):
     return base_doc
 odds.data_type = "odds"
 odds.site = "sofascore"
+odds.output_types = {"home_expected": "float", "home_actual": "float",
+    "home_expected": "float", "away_actual": "float"}

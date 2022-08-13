@@ -120,3 +120,5 @@ def outcomes(log=sys.stdout):
     return metadata
 outcomes.data_type = "outcomes"
 outcomes.site = "betexplorer"
+outcomes.output_types = {"home_score": "integer", "away_score": "integer",
+    "game_completed": "bool", "game_stage": "bool"}
