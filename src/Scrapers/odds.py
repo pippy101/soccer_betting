@@ -122,6 +122,8 @@ def neds(log=sys.stdout):
     if resp is None: return {}
     else: raw_data = resp.json()
 
+    json.dump(raw_data, open(r"test/neds_raw.json", "w"), indent=4)
+
     cruft_fields = {
         "time_of_collection": datetime.utcnow(),
         "site": site
@@ -673,7 +675,7 @@ def betfair(log=sys.stdout):
             market_1x2 = market_1x2[0]
             event_name = event['event']["eventName"]
             home_team, away_team = event_name.split(" v ")
-            game_time = int(datetime.strptime(event["event"]["openDate"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+            game_time = int(datetime.strptime(event["event"]["openDate"], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()) + 10 * 60 * 60
             competition = competition_map[event["eventId"]]
 
             odds_data = {"home_odds_back": [], "home_volume_back": [], "home_odds_lay": [], "home_volume_lay": [],

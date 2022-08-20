@@ -6,11 +6,13 @@ group_by_match groups a list of games from different sites (uses match_game)
 
 from fuzzywuzzy import fuzz
 from itertools import groupby
-from datetime import timedelta
+from datetime import timedelta, datetime
 from operator import itemgetter
 
 class simFuncs:
     datetime_sim = lambda date1, date2: -abs(date1 - date2)
+    # for loading test json files
+    date_string_sim = lambda date1, date2: -abs(datetime.strptime(date1, "%Y-%m-%d %H:%M:%S") - datetime.strptime(date2, "%Y-%m-%d %H:%M:%S"))
     string_sim = lambda string1, string2: fuzz.ratio(string1.lower(), string2.lower())
 
 
@@ -22,10 +24,10 @@ thresh = {
         "threshold": 60, "func": simFuncs.string_sim
     },
     "home_team": {
-        "threshold": 60, "func": simFuncs.string_sim
+        "threshold": 50, "func": simFuncs.string_sim
     },
     "away_team": {
-        "threshold": 50, "func": simFuncs.string_sim
+        "threshold": 40, "func": simFuncs.string_sim
     }
 }
 
@@ -58,7 +60,7 @@ def match_game(game: dict, l_games: list[tuple[int, dict]]):
         return None
     else:
         sim_getter = itemgetter("competition", "home_team", "away_team")
-        total_sim = {global_id: sum(sim_getter(cert_dict)) for global_id, cert_dict in id_sim.items()}
+        total_sim = {global_id: sum([x**0.5 for x in sim_getter(cert_dict)]) for global_id, cert_dict in id_sim.items()}
         max_id = max(total_sim, key=total_sim.get)
         
         return max_id
@@ -108,5 +110,5 @@ def group_by_match(data_points: list[dict], min_id: int, existing_matches: list[
 
 if __name__ == "__main__":
     import json
-    test = json.load(open("all_odds.json", "r"))
-    json.dump(group_by_match(test, 0), open('group_test.json', "w"), indent=4)
+    test = json.load(open(r"test/group_test.json", "r"))
+    json.dump(group_by_match(test, 0), open(r'test/this_is_real_pain.json', "w"), indent=4)

@@ -23,11 +23,11 @@ def get_data(_func, list_loc):
 
 games = []
 functions = [betexplorer.outcomes, forebet.predictions,
-        sofascore.votes, sofascore.h2h, sofascore.pregame, sofascore.odds,
-        odds.neds, odds.tab, odds.bluebet,
-        odds.ps3838, odds.palmerbet,
-        odds.onex, odds.interwetten,
-        odds.playup, odds.betfair]
+    sofascore.votes, sofascore.h2h, sofascore.pregame, sofascore.odds,
+    odds.neds, odds.tab, odds.bluebet,
+    odds.ps3838, odds.palmerbet,
+    odds.onex, odds.interwetten,
+    odds.playup, odds.betfair]
 
 jobs = [gevent.spawn(get_data, _func, games) for _func in functions]
 gevent.wait(jobs)
@@ -38,3 +38,5 @@ sorted_keys = sorted(matched, key=lambda k: len(matched[k]), reverse=True)
 sorted_matches = {k:matched[k] for k in sorted_keys}
 json.dump(sorted_matches, open(r"test/all_data_grouped.json", "w"), indent=4, default=str)
 print(f"Found {len(matched):,} unique games")
+print(f"Found {len(games):,} total games")
+print(f"(Average of {round(len(games) / len(matched),2)} bookies per match)")
